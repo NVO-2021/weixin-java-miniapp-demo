@@ -6,7 +6,7 @@ import cn.binarywang.wx.miniapp.bean.WxMaPhoneNumberInfo;
 import cn.binarywang.wx.miniapp.bean.WxMaUserInfo;
 import cn.binarywang.wx.miniapp.util.WxMaConfigHolder;
 import com.github.binarywang.demo.wx.miniapp.utils.JsonUtils;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.chanjar.weixin.common.error.WxErrorException;
 import org.apache.commons.lang3.StringUtils;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author <a href="https://github.com/binarywang">Binary Wang</a>
  */
 @RestController
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 @RequestMapping("/wx/user/{appid}")
 public class WxMaUserController {
@@ -44,13 +44,13 @@ public class WxMaUserController {
             WxMaJscode2SessionResult session = wxMaService.getUserService().getSessionInfo(code);
             log.info(session.getSessionKey());
             log.info(session.getOpenid());
-            //TODO 可以增加自己的逻辑，关联业务相关数据
+            // TODO 可以增加自己的逻辑，关联业务相关数据
             return JsonUtils.toJson(session);
         } catch (WxErrorException e) {
             log.error(e.getMessage(), e);
             return e.toString();
         } finally {
-            WxMaConfigHolder.remove();//清理ThreadLocal
+            WxMaConfigHolder.remove();// 清理ThreadLocal
         }
     }
 
@@ -68,13 +68,13 @@ public class WxMaUserController {
 
         // 用户信息校验
         if (!wxMaService.getUserService().checkUserInfo(sessionKey, rawData, signature)) {
-            WxMaConfigHolder.remove();//清理ThreadLocal
+            WxMaConfigHolder.remove();// 清理ThreadLocal
             return "user check failed";
         }
 
         // 解密用户信息
         WxMaUserInfo userInfo = wxMaService.getUserService().getUserInfo(sessionKey, encryptedData, iv);
-        WxMaConfigHolder.remove();//清理ThreadLocal
+        WxMaConfigHolder.remove();// 清理ThreadLocal
         return JsonUtils.toJson(userInfo);
     }
 
@@ -92,13 +92,22 @@ public class WxMaUserController {
 
         // 用户信息校验
         if (!wxMaService.getUserService().checkUserInfo(sessionKey, rawData, signature)) {
-            WxMaConfigHolder.remove();//清理ThreadLocal
+            WxMaConfigHolder.remove();// 清理ThreadLocal
             return "user check failed";
         }
 
         // 解密
-        WxMaPhoneNumberInfo phoneNoInfo = wxMaService.getUserService().getPhoneNoInfo(sessionKey, encryptedData, iv);
-        WxMaConfigHolder.remove();//清理ThreadLocal
+        // WxMaPhoneNumberInfo phoneNoInfo = wxMaService.getUserService().getPhoneNumber(sessionKey, encryptedData, iv);
+        WxMaPhoneNumberInfo phoneNoInfo = null;
+        try {
+            phoneNoInfo = wxMaService.getUserService().getPhoneNumber(iv);
+        } catch (WxErrorException e) {
+            log.error("wxMaService.getUserService().getPhoneNumber(iv) fail, params:{}", iv, e);
+            throw new IllegalArgumentException(String.format("验证码匹配失败[%s]，请核实！", iv));
+        } finally {
+            WxMaConfigHolder.remove();// 清理ThreadLocal
+        }
+
         return JsonUtils.toJson(phoneNoInfo);
     }
 
